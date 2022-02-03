@@ -16,6 +16,7 @@ type Writer struct {
 	ansiWriter *ansi.Writer
 	buf        bytes.Buffer
 	ansi       bool
+	state      ansi.AnsiState
 }
 
 func NewWriter(width uint, tail string) *Writer {
@@ -71,7 +72,7 @@ func StringWithTail(s string, width uint, tail string) string {
 // Write truncates content at the given printable cell width, leaving any
 // ansi sequences intact.
 func (w *Writer) Write(b []byte) (int, error) {
-	tw := ansi.PrintableRuneWidth(w.tail)
+	tw := ansi.CalculateWidth(w.state, w.tail)
 	if w.width < uint(tw) {
 		return w.buf.WriteString(w.tail)
 	}
@@ -80,11 +81,11 @@ func (w *Writer) Write(b []byte) (int, error) {
 	var curWidth uint
 
 	for _, c := range string(b) {
-		if c == ansi.Marker {
+		if w.state.IsMarker(c) {
 			// ANSI escape sequence
 			w.ansi = true
 		} else if w.ansi {
-			if ansi.IsTerminator(c) {
+			if w.state.IsTerminator(c) {
 				// ANSI sequence terminated
 				w.ansi = false
 			}

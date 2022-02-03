@@ -9,25 +9,34 @@ import (
 // Buffer is a buffer aware of ANSI escape sequences.
 type Buffer struct {
 	bytes.Buffer
+	state AnsiState
 }
 
 // PrintableRuneWidth returns the cell width of all printable runes in the
 // buffer.
 func (w Buffer) PrintableRuneWidth() int {
-	return PrintableRuneWidth(w.String())
+	return CalculateWidth(w.state, w.String());
 }
 
-// PrintableRuneWidth returns the cell width of the given string.
 func PrintableRuneWidth(s string) int {
+	var state AnsiState
+	return CalculateWidth(state, s);
+}
+
+// Calling CalculateWidth is to be avoided because it won't have 
+// state sufficient to deal with escape codes with lots of data
+// between the escape and the terminator. It was necessary only
+// for truncate.go
+func CalculateWidth(state AnsiState, s string) int {
 	var n int
 	var ansi bool
 
 	for _, c := range s {
-		if c == Marker {
+		if state.IsMarker(c) {
 			// ANSI escape sequence
 			ansi = true
 		} else if ansi {
-			if IsTerminator(c) {
+			if state.IsTerminator(c) {
 				// ANSI sequence terminated
 				ansi = false
 			}

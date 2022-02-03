@@ -14,19 +14,20 @@ type Writer struct {
 	lastseq    bytes.Buffer
 	seqchanged bool
 	runeBuf    []byte
+	state      AnsiState
 }
 
 // Write is used to write content to the ANSI buffer.
 func (w *Writer) Write(b []byte) (int, error) {
 	for _, c := range string(b) {
-		if c == Marker {
+		if w.state.IsMarker(c) {
 			// ANSI escape sequence
 			w.ansi = true
 			w.seqchanged = true
 			_, _ = w.ansiseq.WriteRune(c)
 		} else if w.ansi {
 			_, _ = w.ansiseq.WriteRune(c)
-			if IsTerminator(c) {
+			if w.state.IsTerminator(c) {
 				// ANSI sequence terminated
 				w.ansi = false
 

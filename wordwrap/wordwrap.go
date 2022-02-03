@@ -28,6 +28,7 @@ type WordWrap struct {
 
 	lineLen int
 	ansi    bool
+	state   ansi.AnsiState
 }
 
 // NewWriter returns a new instance of a word-wrapping writer, initialized with
@@ -99,13 +100,13 @@ func (w *WordWrap) Write(b []byte) (int, error) {
 	}
 
 	for _, c := range s {
-		if c == '\x1B' {
+		if w.state.IsMarker(c) {
 			// ANSI escape sequence
 			_, _ = w.word.WriteRune(c)
 			w.ansi = true
 		} else if w.ansi {
 			_, _ = w.word.WriteRune(c)
-			if (c >= 0x40 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) {
+			if w.state.IsTerminator(c) {
 				// ANSI sequence terminated
 				w.ansi = false
 			}

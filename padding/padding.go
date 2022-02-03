@@ -20,6 +20,7 @@ type Writer struct {
 	cache      bytes.Buffer
 	lineLen    int
 	ansi       bool
+	state      ansi.AnsiState
 }
 
 func NewWriter(width uint, paddingFunc PaddingFunc) *Writer {
@@ -62,11 +63,11 @@ func String(s string, width uint) string {
 // Write is used to write content to the padding buffer.
 func (w *Writer) Write(b []byte) (int, error) {
 	for _, c := range string(b) {
-		if c == '\x1B' {
+		if w.state.IsMarker(c) {
 			// ANSI escape sequence
 			w.ansi = true
 		} else if w.ansi {
-			if (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a) {
+			if w.state.IsTerminator(c) {
 				// ANSI sequence terminated
 				w.ansi = false
 			}
